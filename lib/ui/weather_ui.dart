@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:weather_bloc/bloc/weather_bloc.dart';
 import 'package:weather_bloc/model/weather.dart';
 import 'package:weather_bloc/repository/weather_repository.dart';
+import 'package:weather_bloc/ui/weather_search_ui.dart';
 
 class WeatherUI extends StatefulWidget {
   final WeatherRepository weatherRepository;
@@ -19,7 +20,6 @@ class _WeatherUIState extends State<WeatherUI> {
   void initState() {
     super.initState();
     _weatherBloc = WeatherBloc(weatherRepository: widget.weatherRepository);
-    _weatherBloc.fetchWeather("london");
   }
 
   @override
@@ -31,7 +31,14 @@ class _WeatherUIState extends State<WeatherUI> {
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.search),
-            onPressed: null,
+            onPressed: () async {
+              final city = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => WeatherSearchUI()),
+              );
+
+              if (city != null) _weatherBloc.fetchWeather(city);
+            },
           )
         ],
       ),
@@ -45,13 +52,15 @@ class _WeatherUIState extends State<WeatherUI> {
                   return _buildData(snapshot.data);
                 } else if (snapshot.hasError) {
                   return Text(
-                    "Something went wrong",
-                    style: TextStyle(color: Colors.red),
+                    "Something went wrong:\n${snapshot.error}",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.red, fontSize: 25),
                   );
                 } else {
                   return Text(
                     "Please select a location",
-                    style: TextStyle(color: Colors.blue),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.blue, fontSize: 25),
                   );
                 }
               },

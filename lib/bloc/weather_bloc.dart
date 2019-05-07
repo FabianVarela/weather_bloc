@@ -20,7 +20,11 @@ class WeatherBloc implements BaseBloc {
     _loading.sink.add(true);
 
     Weather currentWeather = await weatherRepository.getWeather(city);
-    _weatherFetcher.sink.add(currentWeather);
+
+    if (currentWeather != null)
+      _weatherFetcher.sink.add(currentWeather);
+    else
+      _weatherFetcher.sink.addError("City not found");
 
     _loading.sink.add(false);
   }

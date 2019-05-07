@@ -9,6 +9,10 @@ class WeatherRepository {
 
   Future<Weather> getWeather(String city) async {
     final int locationId = await weatherClient.getLocationId(city);
-    return weatherClient.fetchWeather(locationId);
+
+    if (locationId != 0)
+      return weatherClient.fetchWeather(locationId);
+    else
+      return null;
   }
 }

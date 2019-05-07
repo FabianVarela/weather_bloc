@@ -19,7 +19,10 @@ class WeatherClient {
 
     final locationJson = jsonDecode(locationResponse.body) as List;
 
-    return (locationJson.first)["woeid"];
+    if (locationJson.length > 0)
+      return (locationJson.first)["woeid"];
+    else
+      return 0;
   }
 
   Future<Weather> fetchWeather(int locationId) async {
