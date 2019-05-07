@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:weather_bloc/bloc/weather_bloc.dart';
 import 'package:weather_bloc/model/weather.dart';
@@ -14,11 +16,16 @@ class WeatherUI extends StatefulWidget {
 }
 
 class _WeatherUIState extends State<WeatherUI> {
+  Completer<void> _refreshCompleter;
   WeatherBloc _weatherBloc;
+
+  String _currentCity;
 
   @override
   void initState() {
     super.initState();
+
+    _refreshCompleter = Completer<void>();
     _weatherBloc = WeatherBloc(weatherRepository: widget.weatherRepository);
   }
 
@@ -32,12 +39,12 @@ class _WeatherUIState extends State<WeatherUI> {
           IconButton(
             icon: Icon(Icons.search),
             onPressed: () async {
-              final city = await Navigator.push(
+              _currentCity = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => WeatherSearchUI()),
               );
 
-              if (city != null) _weatherBloc.fetchWeather(city);
+              if (_currentCity != null) _weatherBloc.fetchWeather(_currentCity);
             },
           )
         ],
@@ -90,51 +97,60 @@ class _WeatherUIState extends State<WeatherUI> {
   }
 
   Widget _buildData(Weather weather) {
-    return ListView(
-      children: <Widget>[
-        Padding(
-          padding: EdgeInsets.only(top: 100),
-          child: _getLocation(weather.location),
-        ),
-        Center(
-          child: _getLastUpdate(weather.lastUpdated),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 50),
-          child: Center(
-            child: Column(
-              children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Padding(
-                      padding: EdgeInsets.all(20),
-                      child: _getImageCondition(weather.condition),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Row(
-                        children: _getTemperature(
-                            weather.temp, weather.maxTemp, weather.minTemp),
+    _refreshCompleter?.complete();
+    _refreshCompleter = Completer();
+
+    return RefreshIndicator(
+      onRefresh: () {
+        _weatherBloc.fetchWeather(_currentCity);
+        return _refreshCompleter.future;
+      },
+      child: ListView(
+        children: <Widget>[
+          Padding(
+            padding: EdgeInsets.only(top: 100),
+            child: _getLocation(weather.location),
+          ),
+          Center(
+            child: _getLastUpdate(weather.lastUpdated),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 50),
+            child: Center(
+              child: Column(
+                children: <Widget>[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Padding(
+                        padding: EdgeInsets.all(20),
+                        child: _getImageCondition(weather.condition),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Row(
+                          children: _getTemperature(
+                              weather.temp, weather.maxTemp, weather.minTemp),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Center(
+                    child: Text(
+                      weather.formattedCondition,
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w200,
+                        color: Colors.black,
                       ),
                     ),
-                  ],
-                ),
-                Center(
-                  child: Text(
-                    weather.formattedCondition,
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w200,
-                      color: Colors.black,
-                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
