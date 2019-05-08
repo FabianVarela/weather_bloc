@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:weather_bloc/bloc/theme_bloc.dart';
 import 'package:weather_bloc/bloc/weather_bloc.dart';
+import 'package:weather_bloc/common/custom_theme_data.dart';
 import 'package:weather_bloc/model/weather.dart';
 import 'package:weather_bloc/repository/weather_repository.dart';
 import 'package:weather_bloc/ui/weather_search_ui.dart';
@@ -16,8 +18,12 @@ class WeatherUI extends StatefulWidget {
 }
 
 class _WeatherUIState extends State<WeatherUI> {
+  final Color _textColor = Colors.white;
+
   Completer<void> _refreshCompleter;
+
   WeatherBloc _weatherBloc;
+  ThemeBloc _themeBloc;
 
   String _currentCity;
 
@@ -27,76 +33,95 @@ class _WeatherUIState extends State<WeatherUI> {
 
     _refreshCompleter = Completer<void>();
     _weatherBloc = WeatherBloc(weatherRepository: widget.weatherRepository);
+    _themeBloc = ThemeBloc();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Weather BLoC"),
-        centerTitle: true,
-        actions: <Widget>[
-          IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () async {
-              _currentCity = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => WeatherSearchUI()),
-              );
+    return StreamBuilder(
+      stream: _themeBloc.weatherTheme,
+      builder: (context, AsyncSnapshot<CustomThemeData> customThemeSnapshot) {
+        return Theme(
+          data: customThemeSnapshot.hasData
+              ? customThemeSnapshot.data.themeData
+              : ThemeData.light(),
+          child: Scaffold(
+            appBar: AppBar(
+              title: Text("Weather BLoC"),
+              centerTitle: true,
+              actions: <Widget>[
+                IconButton(
+                  icon: Icon(Icons.search),
+                  onPressed: () async {
+                    _currentCity = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => WeatherSearchUI()),
+                    );
 
-              if (_currentCity != null) _weatherBloc.fetchWeather(_currentCity);
-            },
-          )
-        ],
-      ),
-      body: Stack(
-        children: <Widget>[
-          Center(
-            child: StreamBuilder(
-              stream: _weatherBloc.weather,
-              builder: (context, AsyncSnapshot<Weather> snapshot) {
-                if (snapshot.hasData) {
-                  return _buildData(snapshot.data);
-                } else if (snapshot.hasError) {
-                  return Text(
-                    "Something went wrong:\n${snapshot.error}",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.red, fontSize: 25),
-                  );
-                } else {
-                  return Text(
-                    "Please select a location",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.blue, fontSize: 25),
-                  );
-                }
-              },
+                    if (_currentCity != null)
+                      _weatherBloc.fetchWeather(_currentCity);
+                  },
+                )
+              ],
+            ),
+            body: Stack(
+              children: <Widget>[
+                Center(
+                  child: StreamBuilder(
+                    stream: _weatherBloc.weather,
+                    builder: (context, AsyncSnapshot<Weather> weatherSnapshot) {
+                      if (weatherSnapshot.hasData) {
+                        return _buildData(
+                            weatherSnapshot.data,
+                            (customThemeSnapshot.hasData)
+                                ? customThemeSnapshot.data.backgroundColor
+                                : Colors.white);
+                      } else if (weatherSnapshot.hasError) {
+                        return Text(
+                          "Something went wrong:\n${weatherSnapshot.error}",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.red, fontSize: 25),
+                        );
+                      } else {
+                        return Text(
+                          "Please select a location",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.blue, fontSize: 25),
+                        );
+                      }
+                    },
+                  ),
+                ),
+                StreamBuilder<bool>(
+                  stream: _weatherBloc.isLoading,
+                  builder: (context, loadingSnapshot) {
+                    if (loadingSnapshot.hasData && loadingSnapshot.data) {
+                      return Container(
+                        height: MediaQuery.of(context).size.height,
+                        color: Colors.grey.withOpacity(.7),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            backgroundColor: Colors.green,
+                          ),
+                        ),
+                      );
+                    } else {
+                      return Container();
+                    }
+                  },
+                )
+              ],
             ),
           ),
-          StreamBuilder<bool>(
-            stream: _weatherBloc.isLoading,
-            builder: (context, snapshot) {
-              if (snapshot.hasData && snapshot.data) {
-                return Container(
-                  height: MediaQuery.of(context).size.height,
-                  color: Colors.grey.withOpacity(.7),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      backgroundColor: Colors.green,
-                    ),
-                  ),
-                );
-              } else {
-                return Container();
-              }
-            },
-          )
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildData(Weather weather) {
+  Widget _buildData(Weather weather, Color backgroundColor) {
+    _themeBloc.fetchThemeWeather(weather.condition);
+
     _refreshCompleter?.complete();
     _refreshCompleter = Completer();
 
@@ -105,51 +130,54 @@ class _WeatherUIState extends State<WeatherUI> {
         _weatherBloc.fetchWeather(_currentCity);
         return _refreshCompleter.future;
       },
-      child: ListView(
-        children: <Widget>[
-          Padding(
-            padding: EdgeInsets.only(top: 100),
-            child: _getLocation(weather.location),
-          ),
-          Center(
-            child: _getLastUpdate(weather.lastUpdated),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: 50),
-            child: Center(
-              child: Column(
-                children: <Widget>[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Padding(
-                        padding: EdgeInsets.all(20),
-                        child: _getImageCondition(weather.condition),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Row(
-                          children: _getTemperature(
-                              weather.temp, weather.maxTemp, weather.minTemp),
+      child: Container(
+        decoration: BoxDecoration(color: backgroundColor),
+        child: ListView(
+          children: <Widget>[
+            Padding(
+              padding: EdgeInsets.only(top: 100),
+              child: _getLocation(weather.location),
+            ),
+            Center(
+              child: _getLastUpdate(weather.lastUpdated),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 50),
+              child: Center(
+                child: Column(
+                  children: <Widget>[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Padding(
+                          padding: EdgeInsets.all(20),
+                          child: _getImageCondition(weather.condition),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Row(
+                            children: _getTemperature(
+                                weather.temp, weather.maxTemp, weather.minTemp),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Center(
+                      child: Text(
+                        weather.formattedCondition,
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w200,
+                          color: _textColor,
                         ),
                       ),
-                    ],
-                  ),
-                  Center(
-                    child: Text(
-                      weather.formattedCondition,
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w200,
-                        color: Colors.black,
-                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -161,7 +189,7 @@ class _WeatherUIState extends State<WeatherUI> {
         style: TextStyle(
           fontSize: 30,
           fontWeight: FontWeight.bold,
-          color: Colors.black,
+          color: _textColor,
         ),
       ),
     );
@@ -173,7 +201,7 @@ class _WeatherUIState extends State<WeatherUI> {
       style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w200,
-        color: Colors.black,
+        color: _textColor,
       ),
     );
   }
@@ -210,7 +238,7 @@ class _WeatherUIState extends State<WeatherUI> {
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w600,
-            color: Colors.black,
+            color: _textColor,
           ),
         ),
       ),
@@ -221,7 +249,7 @@ class _WeatherUIState extends State<WeatherUI> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w100,
-              color: Colors.black,
+              color: _textColor,
             ),
           ),
           Text(
@@ -229,7 +257,7 @@ class _WeatherUIState extends State<WeatherUI> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w100,
-              color: Colors.black,
+              color: _textColor,
             ),
           )
         ],
