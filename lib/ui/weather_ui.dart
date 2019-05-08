@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:weather_bloc/bloc/settings_bloc.dart';
 import 'package:weather_bloc/bloc/theme_bloc.dart';
 import 'package:weather_bloc/bloc/weather_bloc.dart';
 import 'package:weather_bloc/common/custom_theme_data.dart';
@@ -8,6 +9,7 @@ import 'package:weather_bloc/common/gradient_container.dart';
 import 'package:weather_bloc/model/weather.dart';
 import 'package:weather_bloc/repository/weather_repository.dart';
 import 'package:weather_bloc/ui/weather_search_ui.dart';
+import 'package:weather_bloc/ui/weather_settings_ui.dart';
 
 class WeatherUI extends StatefulWidget {
   final WeatherRepository weatherRepository;
@@ -51,6 +53,25 @@ class _WeatherUIState extends State<WeatherUI> {
               title: Text("Weather BLoC"),
               centerTitle: true,
               actions: <Widget>[
+                StreamBuilder(
+                  stream: settingsBloc.weatherConversion,
+                  builder: (context, settingsSnapshot) {
+                    return IconButton(
+                      icon: Icon(Icons.settings),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WeatherSettingsUI(
+                                  isChecked: (settingsSnapshot.hasData &&
+                                      settingsSnapshot.data),
+                                ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
                 IconButton(
                   icon: Icon(Icons.search),
                   onPressed: () async {
@@ -63,7 +84,7 @@ class _WeatherUIState extends State<WeatherUI> {
                     if (_currentCity != null)
                       _weatherBloc.fetchWeather(_currentCity);
                   },
-                )
+                ),
               ],
             ),
             body: Stack(
@@ -157,12 +178,20 @@ class _WeatherUIState extends State<WeatherUI> {
                           padding: EdgeInsets.all(20),
                           child: _getImageCondition(weather.condition),
                         ),
-                        Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Row(
-                            children: _getTemperature(
-                                weather.temp, weather.maxTemp, weather.minTemp),
-                          ),
+                        StreamBuilder<TemperatureUnits>(
+                          stream: settingsBloc.weatherUnits,
+                          builder: (context, unitsSnapshot) {
+                            return Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Row(
+                                children: _getTemperature(
+                                    weather.temp,
+                                    weather.maxTemp,
+                                    weather.minTemp,
+                                    unitsSnapshot.data),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -233,12 +262,13 @@ class _WeatherUIState extends State<WeatherUI> {
     }
   }
 
-  List<Widget> _getTemperature(double current, double max, double min) {
+  List<Widget> _getTemperature(
+      double current, double max, double min, TemperatureUnits units) {
     return <Widget>[
       Padding(
         padding: EdgeInsets.only(right: 20),
         child: Text(
-          "${_formatTemperature(current)}°",
+          "${_formatTemperature(current, units)}°",
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w600,
@@ -249,7 +279,7 @@ class _WeatherUIState extends State<WeatherUI> {
       Column(
         children: [
           Text(
-            'max: ${_formatTemperature(max)}°',
+            'max: ${_formatTemperature(max, units)}°',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w100,
@@ -257,7 +287,7 @@ class _WeatherUIState extends State<WeatherUI> {
             ),
           ),
           Text(
-            'min: ${_formatTemperature(min)}°',
+            'min: ${_formatTemperature(min, units)}°',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w100,
@@ -269,7 +299,12 @@ class _WeatherUIState extends State<WeatherUI> {
     ];
   }
 
-  int _formatTemperature(double value) => value.round();
+  int _formatTemperature(double value, TemperatureUnits units) =>
+      (units != null && units == TemperatureUnits.fahrenheit)
+          ? _celsiusToFahrenheit(value)
+          : value.round();
+
+  int _celsiusToFahrenheit(double value) => ((value * 9 / 5) + 32).round();
 
   @override
   void dispose() {
