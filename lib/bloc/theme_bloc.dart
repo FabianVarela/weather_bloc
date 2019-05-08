@@ -49,7 +49,6 @@ class ThemeBloc implements BaseBloc {
         );
         break;
       case WeatherCondition.unknown:
-      default:
         customThemeData = CustomThemeData(
           themeData: ThemeData(primaryColor: Colors.blue),
           backgroundColor: Colors.lightBlue,

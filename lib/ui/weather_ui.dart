@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:weather_bloc/bloc/theme_bloc.dart';
 import 'package:weather_bloc/bloc/weather_bloc.dart';
 import 'package:weather_bloc/common/custom_theme_data.dart';
+import 'package:weather_bloc/common/gradient_container.dart';
 import 'package:weather_bloc/model/weather.dart';
 import 'package:weather_bloc/repository/weather_repository.dart';
 import 'package:weather_bloc/ui/weather_search_ui.dart';
@@ -71,12 +72,17 @@ class _WeatherUIState extends State<WeatherUI> {
                   child: StreamBuilder(
                     stream: _weatherBloc.weather,
                     builder: (context, AsyncSnapshot<Weather> weatherSnapshot) {
+                      _themeBloc.fetchThemeWeather((weatherSnapshot.hasData)
+                          ? weatherSnapshot.data.condition
+                          : null);
+
                       if (weatherSnapshot.hasData) {
                         return _buildData(
-                            weatherSnapshot.data,
-                            (customThemeSnapshot.hasData)
-                                ? customThemeSnapshot.data.backgroundColor
-                                : Colors.white);
+                          weatherSnapshot.data,
+                          (customThemeSnapshot.hasData)
+                              ? customThemeSnapshot.data.backgroundColor
+                              : Colors.lightBlue,
+                        );
                       } else if (weatherSnapshot.hasError) {
                         return Text(
                           "Something went wrong:\n${weatherSnapshot.error}",
@@ -120,8 +126,6 @@ class _WeatherUIState extends State<WeatherUI> {
   }
 
   Widget _buildData(Weather weather, Color backgroundColor) {
-    _themeBloc.fetchThemeWeather(weather.condition);
-
     _refreshCompleter?.complete();
     _refreshCompleter = Completer();
 
@@ -130,8 +134,8 @@ class _WeatherUIState extends State<WeatherUI> {
         _weatherBloc.fetchWeather(_currentCity);
         return _refreshCompleter.future;
       },
-      child: Container(
-        decoration: BoxDecoration(color: backgroundColor),
+      child: GradientContainer(
+        backgroundColor: backgroundColor,
         child: ListView(
           children: <Widget>[
             Padding(

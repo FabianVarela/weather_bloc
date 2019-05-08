@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class CustomThemeData {
   ThemeData themeData;
-  Color backgroundColor;
+  MaterialColor backgroundColor;
 
   CustomThemeData({@required this.themeData, @required this.backgroundColor});
 }
