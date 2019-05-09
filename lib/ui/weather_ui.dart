@@ -20,19 +20,21 @@ class WeatherUI extends StatefulWidget {
   _WeatherUIState createState() => _WeatherUIState();
 }
 
-class _WeatherUIState extends State<WeatherUI> {
+class _WeatherUIState extends State<WeatherUI> with WidgetsBindingObserver {
   final Color _textColor = Colors.white;
 
   Completer<void> _refreshCompleter;
 
   WeatherBloc _weatherBloc;
   ThemeBloc _themeBloc;
-
   String _currentCity;
+
+  AppLifecycleState _notification;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _refreshCompleter = Completer<void>();
     _weatherBloc = WeatherBloc(weatherRepository: widget.weatherRepository);
@@ -40,7 +42,18 @@ class _WeatherUIState extends State<WeatherUI> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    setState(() {
+      _notification = state;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_notification != null) {
+      print('App status notification: $_notification');
+    }
+
     return StreamBuilder(
       stream: _themeBloc.weatherTheme,
       builder: (context, AsyncSnapshot<CustomThemeData> customThemeSnapshot) {
@@ -308,7 +321,9 @@ class _WeatherUIState extends State<WeatherUI> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _weatherBloc.dispose();
+
     super.dispose();
   }
 }
