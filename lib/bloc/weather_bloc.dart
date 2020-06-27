@@ -12,9 +12,9 @@ class WeatherBloc implements BaseBloc {
 
   WeatherBloc({@required this.weatherRepository});
 
-  Observable<Weather> get weather => _weatherFetcher.stream;
+  Stream<Weather> get weather => _weatherFetcher.stream;
 
-  Observable<bool> get isLoading => _loading.stream;
+  Stream<bool> get isLoading => _loading.stream;
 
   fetchWeather(String city) async {
     _loading.sink.add(true);

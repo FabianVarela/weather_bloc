@@ -7,7 +7,7 @@ import 'package:weather_bloc/model/weather.dart';
 class ThemeBloc implements BaseBloc {
   final _weatherTheme = PublishSubject<CustomThemeData>();
 
-  Observable<CustomThemeData> get weatherTheme => _weatherTheme.stream;
+  Stream<CustomThemeData> get weatherTheme => _weatherTheme.stream;
 
   fetchThemeWeather(WeatherCondition condition) {
     CustomThemeData customThemeData;

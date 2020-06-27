@@ -7,9 +7,9 @@ class SettingsBloc implements BaseBloc {
   final _weatherConversion = BehaviorSubject<bool>();
   final _weatherUnits = PublishSubject<TemperatureUnits>();
 
-  Observable<bool> get weatherConversion => _weatherConversion.stream;
+  Stream<bool> get weatherConversion => _weatherConversion.stream;
 
-  Observable<TemperatureUnits> get weatherUnits => _weatherUnits.stream;
+  Stream<TemperatureUnits> get weatherUnits => _weatherUnits.stream;
 
   changeTemperatureConversion(bool isChanged) {
     _weatherConversion.sink.add(isChanged);
